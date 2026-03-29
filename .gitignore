@@ -47,3 +47,14 @@ coverage/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# Planning and documentation (not for public repo)
+00.START/
+01.PLAN/
+02.DOCS/
+PHASE1-COMPLETION.md
+PHASE1-WEEK2-COMPLETION.md
+PHASE1-WEEK3-COMPLETION.md
+PHASE1-WEEK4-COMPLETION.md
+PHASE2-COMPLETION.md
+PHASE3-COMPLETION.md

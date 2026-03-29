@@ -672,7 +672,7 @@ export class CapacityPlanner {
 }
 
 // Register monitoring tools
-export function registerMonitoringTools(server: McpServer, license: LicenseInfo) {
+export function registerMonitoringTools(server: McpServer, _license: LicenseInfo) {
   // Initialize tables
   PerformanceMonitor.initializeTables();
 

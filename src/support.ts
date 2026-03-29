@@ -328,7 +328,7 @@ export class SupportTicketSystem {
 }
 
 // Register support tools
-export function registerSupportTools(server: McpServer, license: LicenseInfo) {
+export function registerSupportTools(server: McpServer, _license: LicenseInfo) {
   // Initialize tables
   SupportTicketSystem.initializeTables();
 

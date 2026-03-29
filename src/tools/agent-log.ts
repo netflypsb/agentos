@@ -12,9 +12,6 @@ import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from
 const logDir = join(homedir(), ".agentos", "logs");
 mkdirSync(logDir, { recursive: true });
 
-// Initialize usage tracking
-UsageTracker.initialize(db);
-
 // Enhanced database schema for better performance
 db.exec(`
   -- Add indexes for faster search
@@ -82,6 +79,9 @@ function rotateLogs(): void {
 }
 
 export function registerLogTools(server: McpServer, license: LicenseInfo) {
+  // Initialize usage tracking
+  UsageTracker.initialize(db);
+
   server.tool(
     "log_action",
     "Append a structured log entry for debugging and audit trail.",

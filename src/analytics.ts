@@ -240,7 +240,7 @@ export class UsageAnalytics {
 }
 
 // Register analytics tools
-export function registerAnalyticsTools(server: McpServer, license: LicenseInfo) {
+export function registerAnalyticsTools(server: McpServer, _license: LicenseInfo) {
   // Initialize tables
   UsageAnalytics.initializeTables();
 

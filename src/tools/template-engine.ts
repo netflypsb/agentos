@@ -41,8 +41,8 @@ function renderSimpleVars(template: string, variables: Record<string, unknown>):
     return value !== undefined ? String(value) : match;
   });
 }
-, license: LicenseInfo
-export function registerTemplateEngineTools(server: McpServer) {
+
+export function registerTemplateEngineTools(server: McpServer, _license: LicenseInfo) {
   // Initialize built-in templates on first use
   let initialized = false;
   

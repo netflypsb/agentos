@@ -4,7 +4,7 @@ import { db } from "../db.js";
 import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
 import type { LicenseInfo } from "../license.js";
 
-export function registerTaskLedgerTools(server: McpServer, license: LicenseInfo) {
+export function registerTaskLedgerTools(server: McpServer, _license: LicenseInfo) {
   server.tool(
     "task_create",
     "Create a new task with initial state for tracking progress across sessions.",

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "../db.js";
 import { homedir } from "os";
-import { mkdirSync, writeFileSync, appendFileSync, readFileSync } from "fs";
+import { mkdirSync, appendFileSync, readFileSync } from "fs";
 import { join } from "path";
 import { LicenseManager, UsageTracker, LicenseTier } from "../license.js";
 import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
@@ -145,7 +145,7 @@ export function registerLogTools(server: McpServer) {
       db.prepare(`
         INSERT INTO logs (timestamp, tool_name, action, input_summary, output_summary, duration_ms, metadata)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(timestamp, validatedToolName, validatedAction, validatedInputSummary, validatedOutputSummary, validatedDuration, metadata);
+      `).run(timestamp, validatedToolName, validatedAction, validatedInputSummary, validatedOutputSummary, validatedDuration, validatedMetadata);
 
       // Append to JSONL log
       appendToJSONL(logEntry);

@@ -13,44 +13,66 @@ interface MockMCPServer {
 
 // Mock server implementation
 const server: MockMCPServer = {
-  tool: (name: string, description: string, schema: any, handler: Function) => {
-    console.log(`\n📦 Tool: ${name}`);
-    console.log(`   ${description}`);
-    console.log(`   Schema: ${JSON.stringify(schema, null, 2)}`);
+  tool: (_name: string, _description: string, _schema: any, _handler: Function) => {
+    console.log(`\n📦 Tool: ${_name}`);
+    console.log(`   ${_description}`);
+    console.log(`   Schema: ${JSON.stringify(_schema, null, 2)}`);
   }
 };
 
 // Mock Zod schema (simplified)
 const z = {
-  string: () => ({ 
-    describe: (desc: string) => ({ 
-      type: 'string', 
-      description: desc,
-      optional: () => ({ default: (value: any) => ({ default: value }) }),
-      default: (value: any) => ({ default: value })
-    })
-  }),
-  number: () => ({ 
-    describe: (desc: string) => ({ 
-      type: 'number', 
-      description: desc,
-      optional: () => ({ default: (value: any) => ({ default: value }) }),
-      default: (value: any) => ({ default: value })
-    })
-  }),
-  enum: (values: string[]) => ({ 
-    describe: (desc: string) => ({ enum: values, description: desc }) 
+  string: () => {
+    const createDescribe = (base: any) => (desc: string) => ({ ...base, description: desc });
+    const base = {
+      type: 'string',
+      description: '',
+    };
+    return {
+      describe: createDescribe(base),
+      optional: () => {
+        const optionalBase = { ...base, isOptional: true };
+        return { ...optionalBase, describe: createDescribe(optionalBase) };
+      },
+      default: (value: unknown) => {
+        const defaultBase = { ...base, defaultValue: value };
+        return { ...defaultBase, describe: createDescribe(defaultBase) };
+      }
+    };
+  },
+  number: () => {
+    const createDescribe = (base: any) => (desc: string) => ({ ...base, description: desc });
+    const base = {
+      type: 'number',
+      description: '',
+    };
+    return {
+      describe: createDescribe(base),
+      optional: () => {
+        const optionalBase = { ...base, isOptional: true };
+        return { ...optionalBase, describe: createDescribe(optionalBase) };
+      },
+      default: (value: unknown) => {
+        const defaultBase = { ...base, defaultValue: value };
+        return { ...defaultBase, describe: createDescribe(defaultBase) };
+      }
+    };
+  },
+  enum: (values: string[]) => ({
+    type: 'enum',
+    enum: values,
+    describe: (_desc: string) => ({ type: 'enum', enum: values, description: _desc })
   })
 };
 
 // Mock database
-const mockDB = {
+const _mockDB = {
   tables: new Map(),
-  exec: (sql: string) => console.log(`🗄️  Executing: ${sql}`),
-  prepare: (sql: string) => ({
-    run: (...args: any[]) => ({ changes: 1, lastInsertRowid: 1 }),
-    get: (...args: any[]) => undefined,
-    all: (...args: any[]) => []
+  exec: (_sql: string) => console.log(`🗄️  Executing: ${_sql}`),
+  prepare: (_sql: string) => ({
+    run: (..._args: any[]) => ({ changes: 1, lastInsertRowid: 1 }),
+    get: (..._args: any[]) => undefined,
+    all: (..._args: any[]) => []
   })
 };
 
@@ -65,8 +87,8 @@ function registerKvTools(server: MockMCPServer) {
       namespace: z.string().describe("Namespace for key isolation").default("default"),
       ttl_seconds: z.number().describe("Time-to-live in seconds").optional(),
     },
-    async ({ key, value, namespace, ttl_seconds }) => {
-      console.log(`🔑 Storing: ${key} = ${value} (namespace: ${namespace})`);
+    async ({ key, value, namespace, ttl_seconds }: { key: string; value: string; namespace: string; ttl_seconds?: number }) => {
+      console.log(`🔑 Storing: ${key} = ${value} (namespace: ${namespace}, ttl: ${ttl_seconds})`);
       return { content: [{ type: "text", text: `Stored "${key}" in namespace "${namespace}"` }] };
     }
   );
@@ -76,9 +98,9 @@ function registerKvTools(server: MockMCPServer) {
     "Retrieve a value by key from persistent local memory.",
     {
       key: z.string().describe("The key to retrieve"),
-      namespace: z.string().optional().default("default").describe("Namespace for key isolation"),
+      namespace: z.string().describe("Namespace for key isolation").optional().default("default"),
     },
-    async ({ key, namespace }) => {
+    async ({ key, namespace }: { key: string; namespace: string }) => {
       console.log(`🔑 Retrieving: ${key} (namespace: ${namespace})`);
       return { content: [{ type: "text", text: `Value for "${key}"` }] };
     }
@@ -95,8 +117,8 @@ function registerFormatTools(server: MockMCPServer) {
       output_format: z.enum(["md", "html", "csv", "json", "yaml", "xml"]).describe("Target format"),
       content: z.string().describe("Content to convert"),
     },
-    async ({ input_format, output_format, content }) => {
-      console.log(`🔄 Converting: ${input_format} → ${output_format}`);
+    async ({ input_format, output_format, content }: { input_format: string; output_format: string; content: string }) => {
+      console.log(`🔄 Converting: ${input_format} → ${output_format} (${content.length} chars)`);
       return { 
         content: [{ 
           type: "text", 
@@ -118,8 +140,13 @@ function registerLogTools(server: MockMCPServer) {
       input_summary: z.string().optional().describe("Brief summary of input"),
       output_summary: z.string().optional().describe("Brief summary of output"),
     },
-    async ({ tool_name, action, input_summary, output_summary }) => {
-      console.log(`📝 Logging: ${tool_name}.${action}`);
+    async ({ tool_name, action, input_summary, output_summary }: { 
+      tool_name: string; 
+      action: string; 
+      input_summary?: string; 
+      output_summary?: string;
+    }) => {
+      console.log(`📝 Logging: ${tool_name}.${action} (input: ${input_summary || 'none'}, output: ${output_summary || 'none'})`);
       return { 
         content: [{ 
           type: "text", 

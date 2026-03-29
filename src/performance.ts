@@ -177,22 +177,19 @@ export class QueryOptimizer {
 }
 
 // Connection pooling simulation (for future use with external databases)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export class ConnectionPool {
-  private static connections: any[] = [];
-  private static readonly MAX_SIZE = 10;
-
-  static async getConnection(): Promise<any> {
-    // For SQLite, we don't need connection pooling
-    // This is a placeholder for future database systems
+  // Placeholder for future implementation - SQLite doesn't need connection pooling
+  static async getConnection(): Promise<null> {
     return null;
   }
 
-  static releaseConnection(connection: any): void {
-    // Placeholder for future implementation
+  static releaseConnection(_connection: unknown): void {
+    // Placeholder
   }
 
   static closeAll(): void {
-    // Placeholder for future implementation
+    // Placeholder
   }
 }
 

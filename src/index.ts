@@ -9,6 +9,7 @@ import { registerBudgetGuardTools } from "./tools/budget-guard.js";
 import { registerTemplateEngineTools } from "./tools/template-engine.js";
 import { registerAnalyticsTools } from "./analytics.js";
 import { registerSupportTools } from "./support.js";
+import { registerMonitoringTools } from "./monitoring.js";
 
 const server = new McpServer(
   { name: "agentos-mcp", version: "1.0.0" },
@@ -24,6 +25,11 @@ AVAILABLE CAPABILITIES:
 - template_list/template_render/template_create: Jinja2-style templating with built-in library
 - analytics_dashboard/analytics_report: Usage analytics and monitoring
 - support_create_ticket/support_ticket_status/support_list_tickets/support_knowledge_base: Customer support
+- monitoring_record_metric/monitoring_get_metrics: Real-time performance monitoring
+- monitoring_get_alerts/monitoring_acknowledge_alert: Alert management
+- monitoring_business_report: Business intelligence reports
+- monitoring_capacity_analysis: Capacity planning and scaling recommendations
+- monitoring_system_status: Overall system health
 
 RECOMMENDED WORKFLOWS:
 - "Remember something": kv_set with a descriptive key
@@ -33,7 +39,12 @@ RECOMMENDED WORKFLOWS:
 - "Check my budget": budget_check with budget_id
 - "Generate a meeting notes": template_render with meeting_notes template
 - "View usage stats": analytics_dashboard
-- "Get help": support_knowledge_base or support_create_ticket`
+- "Get help": support_knowledge_base or support_create_ticket
+- "Record metric": monitoring_record_metric
+- "View alerts": monitoring_get_alerts
+- "Business report": monitoring_business_report
+- "Check capacity": monitoring_capacity_analysis
+- "System status": monitoring_system_status`
   }
 );
 
@@ -45,6 +56,7 @@ registerBudgetGuardTools(server);
 registerTemplateEngineTools(server);
 registerAnalyticsTools(server);
 registerSupportTools(server);
+registerMonitoringTools(server);
 
 async function main() {
   const transport = new StdioServerTransport();

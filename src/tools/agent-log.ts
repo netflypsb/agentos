@@ -2,12 +2,17 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "../db.js";
 import { homedir } from "os";
-import { mkdirSync, writeFileSync, appendFileSync, readFileSync } from "fs";
+import { mkdirSync, appendFileSync, readFileSync } from "fs";
 import { join } from "path";
+import { LicenseManager, UsageTracker, LicenseTier } from "../license.js";
+import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
 
 // JSONL logging setup
 const logDir = join(homedir(), ".agentos", "logs");
 mkdirSync(logDir, { recursive: true });
+
+// Initialize usage tracking
+UsageTracker.initialize(db);
 
 // Enhanced database schema for better performance
 db.exec(`
@@ -87,61 +92,82 @@ export function registerLogTools(server: McpServer) {
       duration_ms: z.number().optional().describe("Duration in milliseconds"),
       metadata: z.string().optional().describe("Additional metadata as JSON"),
     },
-    async ({ tool_name, action, input_summary, output_summary, duration_ms, metadata }) => {
-      try {
-        // Check daily limit for free tier
-        const today = new Date().toISOString().split('T')[0];
-        const dailyCount = db.prepare(`
-          SELECT COUNT(*) as count FROM logs 
-          WHERE date(timestamp) = ?
-        `).get(today) as { count: number };
+    withErrorHandling(async ({ tool_name, action, input_summary, output_summary, duration_ms, metadata }) => {
+      // Get license key from environment
+      const licenseKey = process.env.AGENTOS_LICENSE_KEY;
+      const license = await LicenseManager.validateLicense(licenseKey);
 
-        if (dailyCount.count >= 100) {
-          return {
-            content: [{ 
-              type: "text", 
-              text: "Daily log limit reached (100 entries). Upgrade to Pro for unlimited logging." 
-            }],
-            isError: true,
-          };
-        }
-
-        const timestamp = new Date().toISOString();
-        const logEntry = {
-          timestamp,
-          tool_name,
-          action,
-          input_summary,
-          output_summary,
-          duration_ms,
-          metadata: metadata ? JSON.parse(metadata) : null
-        };
-
-        // Insert into SQLite
-        db.prepare(`
-          INSERT INTO logs (timestamp, tool_name, action, input_summary, output_summary, duration_ms, metadata)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run(timestamp, tool_name, action, input_summary, output_summary, duration_ms, metadata);
-
-        // Append to JSONL log
-        appendToJSONL(logEntry);
-
-        // Trigger log rotation check
-        rotateLogs();
-
-        return {
-          content: [{ 
-            type: "text", 
-            text: `Logged action: ${tool_name}.${action} (${dailyCount.count + 1}/100 for today)` 
-          }],
-        };
-      } catch (err) {
-        return {
-          content: [{ type: "text", text: `Error: ${(err as Error).message}` }],
-          isError: true,
-        };
+      // Check if user can use logging
+      const canLog = LicenseManager.canUseFeature(license, "agent_log_limited");
+      if (!canLog) {
+        const upgradePrompt = LicenseManager.getUpgradePrompt(license);
+        throw AgentErrorFactory.create(
+          ErrorCode.DAILY_LIMIT_EXCEEDED,
+          upgradePrompt
+        );
       }
-    }
+
+      // Check daily limit for free tier
+      const today = new Date().toISOString().split('T')[0];
+      const dailyCount = UsageTracker.getDailyUsage("agent_log", today);
+
+      if (license.tier === LicenseTier.FREE && dailyCount >= license.limits.dailyLogs) {
+        const upgradePrompt = LicenseManager.getUpgradePrompt(license);
+        throw AgentErrorFactory.create(
+          ErrorCode.DAILY_LIMIT_EXCEEDED,
+          `Daily log limit reached (${dailyCount}/${license.limits.dailyLogs}). ${upgradePrompt}`
+        );
+      }
+
+      // Validate inputs
+      const validatedToolName = ValidationUtils.validateString(tool_name, 1, 100);
+      const validatedAction = ValidationUtils.validateString(action, 1, 100);
+      const validatedInputSummary = input_summary ? 
+        ValidationUtils.validateString(input_summary, 0, 500) : null;
+      const validatedOutputSummary = output_summary ? 
+        ValidationUtils.validateString(output_summary, 0, 500) : null;
+      const validatedDuration = duration_ms ? 
+        ValidationUtils.validateNumber(duration_ms, 0, 3600000) : null; // Max 1 hour
+      const validatedMetadata = metadata ? ValidationUtils.validateJSON(metadata) : null;
+
+      const timestamp = new Date().toISOString();
+      const logEntry = {
+        timestamp,
+        tool_name: validatedToolName,
+        action: validatedAction,
+        input_summary: validatedInputSummary,
+        output_summary: validatedOutputSummary,
+        duration_ms: validatedDuration,
+        metadata: validatedMetadata
+      };
+
+      // Insert into SQLite
+      db.prepare(`
+        INSERT INTO logs (timestamp, tool_name, action, input_summary, output_summary, duration_ms, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(timestamp, validatedToolName, validatedAction, validatedInputSummary, validatedOutputSummary, validatedDuration, validatedMetadata);
+
+      // Append to JSONL log
+      appendToJSONL(logEntry);
+
+      // Trigger log rotation check
+      rotateLogs();
+
+      // Track usage for free tier
+      if (license.tier === LicenseTier.FREE) {
+        UsageTracker.trackUsage("agent_log");
+      }
+
+      const remainingLogs = license.tier === LicenseTier.FREE ? 
+        ` (${license.limits.dailyLogs - (dailyCount + 1)} remaining today)` : "";
+
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Logged action: ${validatedToolName}.${validatedAction}${remainingLogs}` 
+        }],
+      };
+    })
   );
 
   server.tool(

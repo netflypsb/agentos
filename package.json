@@ -1,7 +1,7 @@
 {
   "name": "agentos-mcp",
   "version": "1.0.0",
-  "description": "Essential operating system services for AI agents",
+  "description": "Essential operating system services for AI agents - persistent memory, format conversion, and structured logging",
   "type": "module",
   "main": "build/index.js",
   "bin": {
@@ -11,43 +11,66 @@
     "build": "tsc",
     "start": "node build/index.js",
     "dev": "tsx --watch src/index.ts",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && npm run test",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint src --ext .ts",
-    "clean": "rimraf build"
+    "lint:fix": "eslint src --ext .ts --fix",
+    "clean": "rimraf build",
+    "prepack": "npm run build",
+    "postpack": "npm run clean",
+    "semantic-release": "semantic-release"
   },
   "files": [
     "build/**",
-    "templates/**",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "docs/**"
   ],
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "ai",
     "agent",
     "memory",
     "logging",
-    "task-management"
+    "task-management",
+    "kv-store",
+    "format-converter",
+    "sqlite",
+    "claude",
+    "anthropic"
   ],
-  "author": "AgentOS Team",
+  "author": {
+    "name": "AgentOS Team",
+    "email": "team@agentos-mcp.com",
+    "url": "https://agentos-mcp.com"
+  },
   "license": "MIT",
   "mcpName": "agentos-mcp",
   "dependencies": {
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "sql.js": "^1.11.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@types/better-sqlite3": "^7.6.8",
+    "@types/jest": "^29.5.8",
+    "@types/sql.js": "^1.4.9",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.54.0",
     "jest": "^29.7.0",
     "rimraf": "^5.0.5",
     "tsx": "^4.6.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "semantic-release": "^22.0.5"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "repository": {
     "type": "git",
@@ -56,5 +79,13 @@
   "bugs": {
     "url": "https://github.com/agentos-mcp/server/issues"
   },
-  "homepage": "https://github.com/agentos-mcp/server#readme"
+  "homepage": "https://agentos-mcp.com",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://github.com/sponsors/agentos-mcp"
+  }
 }

@@ -1,0 +1,38 @@
+# Development Dockerfile for AgentOS MCP Server
+FROM node:18-alpine AS development
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    sqlite-dev \
+    git
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev)
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Create data directory
+RUN mkdir -p /data
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV AGENTOS_DATA_DIR=/data
+
+# Expose ports for development
+EXPOSE 3000 9229
+
+# Start development server
+CMD ["npm", "run", "dev"]

@@ -32,7 +32,10 @@
     "build",
     "tests",
     "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "src/demo.ts",
+    "src/db-mock.ts",
+    "src/compatibility.ts"
   ],
   "ts-node": {
     "esm": true

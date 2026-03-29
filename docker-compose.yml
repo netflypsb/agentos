@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  agentos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    container_name: agentos-mcp
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - AGENTOS_DATA_DIR=/data
+      - AGENTOS_LICENSE_KEY=${AGENTOS_LICENSE_KEY:-}
+    volumes:
+      - agentos_data:/data
+      - ./logs:/app/logs
+    networks:
+      - agentos-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('AgentOS MCP Server is running')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development service
+  agentos-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: agentos-mcp-dev
+    restart: "no"
+    environment:
+      - NODE_ENV=development
+      - AGENTOS_DATA_DIR=/data
+    volumes:
+      - .:/app
+      - agentos_dev_data:/data
+      - /app/node_modules
+    networks:
+      - agentos-network
+    ports:
+      - "3000:3000"
+    command: npm run dev
+
+  # Test service
+  agentos-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: agentos-mcp-test
+    restart: "no"
+    environment:
+      - NODE_ENV=test
+      - AGENTOS_DATA_DIR=/tmp/test-data
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - agentos-network
+    command: npm test
+
+volumes:
+  agentos_data:
+    driver: local
+  agentos_dev_data:
+    driver: local
+
+networks:
+  agentos-network:
+    driver: bridge

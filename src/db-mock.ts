@@ -18,31 +18,33 @@ export class MockDatabase {
     }
   }
 
-  prepare(sql: string): MockStatement {
-    return new MockStatement(sql, this.tables);
+  prepare(_sql: string): MockStatement {
+    return new MockStatement(_sql, this.tables);
   }
 }
 
 export class MockStatement {
-  private sql: string;
-  private tables: Map<string, DatabaseRow[]>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _sql: string;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private _tables: Map<string, DatabaseRow[]>;
 
   constructor(sql: string, tables: Map<string, DatabaseRow[]>) {
-    this.sql = sql;
-    this.tables = tables;
+    this._sql = sql;
+    this._tables = tables;
   }
 
-  run(...params: any[]): { changes: number; lastInsertRowid: number } {
+  run(..._args: any[]): { changes: number; lastInsertRowid: number } {
     // Simple mock for INSERT/UPDATE/DELETE
     return { changes: 1, lastInsertRowid: 1 };
   }
 
-  get(...params: any[]): DatabaseRow | undefined {
+  get(..._args: any[]): DatabaseRow | undefined {
     // Simple mock for SELECT
     return undefined;
   }
 
-  all(...params: any[]): DatabaseRow[] {
+  all(..._args: any[]): DatabaseRow[] {
     // Simple mock for SELECT all
     return [];
   }

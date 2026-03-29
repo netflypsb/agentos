@@ -42,7 +42,6 @@ export class CompatibilityTester {
   }
 
   static async runAllTests(): Promise<CompatibilityReport> {
-    const startTime = Date.now();
     const results: CompatibilityReport['tests'] = [];
     let passed = 0;
     let failed = 0;
@@ -240,9 +239,9 @@ export function registerBuiltInTests(): void {
         };
 
         // Test tool registration
-        const { registerKvTools } = await import('../tools/kv-store.js');
-        const { registerFormatTools } = await import('../tools/format-convert.js');
-        const { registerLogTools } = await import('../tools/agent-log.js');
+        const { registerKvTools } = await import('../tools/kv-store');
+        const { registerFormatTools } = await import('../tools/format-convert');
+        const { registerLogTools } = await import('../tools/agent-log');
 
         registerKvTools(mockServer as any);
         registerFormatTools(mockServer as any);

@@ -33,7 +33,8 @@ module.exports = {
   testTimeout: 10000,
   verbose: true,
   moduleFileExtensions: ['ts', 'js', 'json'],
-  moduleNameMapping: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  }
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
 };

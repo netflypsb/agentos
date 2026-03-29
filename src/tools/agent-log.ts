@@ -5,6 +5,7 @@ import { homedir } from "os";
 import { mkdirSync, appendFileSync, readFileSync } from "fs";
 import { join } from "path";
 import { LicenseManager, UsageTracker, LicenseTier } from "../license.js";
+import type { LicenseInfo } from "../license.js";
 import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
 
 // JSONL logging setup
@@ -80,7 +81,7 @@ function rotateLogs(): void {
   }
 }
 
-export function registerLogTools(server: McpServer) {
+export function registerLogTools(server: McpServer, license: LicenseInfo) {
   server.tool(
     "log_action",
     "Append a structured log entry for debugging and audit trail.",
@@ -93,10 +94,6 @@ export function registerLogTools(server: McpServer) {
       metadata: z.string().optional().describe("Additional metadata as JSON"),
     },
     withErrorHandling(async ({ tool_name, action, input_summary, output_summary, duration_ms, metadata }) => {
-      // Get license key from environment
-      const licenseKey = process.env.AGENTOS_LICENSE_KEY;
-      const license = await LicenseManager.validateLicense(licenseKey);
-
       // Check if user can use logging
       const canLog = LicenseManager.canUseFeature(license, "agent_log_limited");
       if (!canLog) {

@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "../db.js";
 import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
+import { builtInTemplates } from "./template-library.js";
+import type { LicenseInfo } from "../license.js";
 
 // In-memory loop detection store (fingerprint -> count)
 const loopFingerprints = new Map<string, { count: number; lastSeen: number }>();
@@ -16,7 +18,7 @@ setInterval(() => {
   }
 }, 300000);
 
-export function registerBudgetGuardTools(server: McpServer) {
+export function registerBudgetGuardTools(server: McpServer, license: LicenseInfo) {
   server.tool(
     "budget_set",
     "Set a budget limit for a session or task to track resource usage.",

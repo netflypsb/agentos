@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "../db.js";
 import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
 import { builtInTemplates } from "./template-library.js";
+import type { LicenseInfo } from "../license.js";
 
 // Simple template engine - supports {{variable}}, {%if condition%}, {%for item in items%}
 function renderTemplate(template: string, variables: Record<string, unknown>): string {
@@ -40,7 +41,7 @@ function renderSimpleVars(template: string, variables: Record<string, unknown>):
     return value !== undefined ? String(value) : match;
   });
 }
-
+, license: LicenseInfo
 export function registerTemplateEngineTools(server: McpServer) {
   // Initialize built-in templates on first use
   let initialized = false;

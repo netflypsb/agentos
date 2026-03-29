@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "./db.js";
 import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "./errors.js";
+import type { LicenseInfo } from "./license.js";
 
 export enum TicketStatus {
   OPEN = "open",
@@ -327,7 +328,7 @@ export class SupportTicketSystem {
 }
 
 // Register support tools
-export function registerSupportTools(server: McpServer) {
+export function registerSupportTools(server: McpServer, license: LicenseInfo) {
   // Initialize tables
   SupportTicketSystem.initializeTables();
 

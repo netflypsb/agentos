@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "./db.js";
 import { withErrorHandling } from "./errors.js";
+import type { LicenseInfo } from "./license.js";
 
 // Metric types
 export enum MetricType {
@@ -671,7 +672,7 @@ export class CapacityPlanner {
 }
 
 // Register monitoring tools
-export function registerMonitoringTools(server: McpServer) {
+export function registerMonitoringTools(server: McpServer, license: LicenseInfo) {
   // Initialize tables
   PerformanceMonitor.initializeTables();
 

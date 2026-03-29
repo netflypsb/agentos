@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "./db.js";
 import { AgentErrorFactory, withErrorHandling, ErrorCode } from "./errors.js";
+import type { LicenseInfo } from "./license.js";
 
 export interface UsageMetrics {
   date: string;
@@ -239,7 +240,7 @@ export class UsageAnalytics {
 }
 
 // Register analytics tools
-export function registerAnalyticsTools(server: McpServer) {
+export function registerAnalyticsTools(server: McpServer, license: LicenseInfo) {
   // Initialize tables
   UsageAnalytics.initializeTables();
 

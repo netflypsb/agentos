@@ -2,8 +2,9 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "../db.js";
 import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
+import type { LicenseInfo } from "../license.js";
 
-export function registerTaskLedgerTools(server: McpServer) {
+export function registerTaskLedgerTools(server: McpServer, license: LicenseInfo) {
   server.tool(
     "task_create",
     "Create a new task with initial state for tracking progress across sessions.",

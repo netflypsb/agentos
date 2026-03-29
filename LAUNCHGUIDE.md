@@ -39,7 +39,7 @@ No API keys required for local usage. The server uses SQLite for persistent stor
 
 Optional environment variables:
 - `AGENTOS_DATA_DIR` (optional): Custom directory for database storage. Default is `~/.agentos`
-- `MCP_MARKETPLACE_LICENSE_KEY` (optional): License key for accessing enhanced features via MCP Marketplace
+- `MCP_LICENSE_KEY` (optional): License key for accessing enhanced features via MCP Marketplace (format: mcp_live_...)
 
 ## Category
 Developer Tools

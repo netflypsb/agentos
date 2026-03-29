@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "../db.js";
+import { AgentErrorFactory, ValidationUtils, withErrorHandling, ErrorCode } from "../errors.js";
 
 export function registerKvTools(server: McpServer) {
   server.tool(
@@ -8,36 +9,45 @@ export function registerKvTools(server: McpServer) {
     "Store a key-value pair in persistent local memory. " +
     "Supports namespaces for isolation and optional TTL for auto-expiry.",
     {
-      key: z.string().describe("The key to store"),
-      value: z.string().describe("The value to store (string or JSON)"),
+      key: z.string().describe("The key to store (alphanumeric, dot, underscore, hyphen, max 255 chars)"),
+      value: z.string().describe("The value to store (string or JSON, max 1MB)"),
       namespace: z.string().optional().default("default")
-        .describe("Namespace for key isolation"),
+        .describe("Namespace for key isolation (alphanumeric, underscore, hyphen, max 50 chars)"),
       ttl_seconds: z.number().optional()
-        .describe("Time-to-live in seconds. Omit for permanent storage."),
+        .describe("Time-to-live in seconds (1-31536000, max 1 year)"),
     },
-    async ({ key, value, namespace, ttl_seconds }) => {
+    withErrorHandling(async ({ key, value, namespace, ttl_seconds }) => {
+      // Validate inputs
+      const validatedKey = ValidationUtils.validateKey(key);
+      const validatedNamespace = ValidationUtils.validateNamespace(namespace);
+      const validatedValue = ValidationUtils.validateString(value, 0, 1048576); // 1MB limit
+      
+      let validatedTtl: number | null = null;
+      if (ttl_seconds !== undefined) {
+        validatedTtl = ValidationUtils.validateNumber(ttl_seconds, 1, 31536000); // Max 1 year
+      }
+
+      const ttl = validatedTtl 
+        ? Math.floor(Date.now() / 1000) + validatedTtl 
+        : null;
+
       try {
-        const ttl = ttl_seconds 
-          ? Math.floor(Date.now() / 1000) + ttl_seconds 
-          : null;
         db.prepare(`
           INSERT OR REPLACE INTO kv (namespace, key, value, ttl, created_at)
           VALUES (?, ?, ?, ?, unixepoch())
-        `).run(namespace, key, value, ttl);
+        `).run(validatedNamespace, validatedKey, validatedValue, ttl);
+
+        const ttlMessage = validatedTtl ? ` (expires in ${validatedTtl}s)` : "";
         return {
           content: [{ 
             type: "text", 
-            text: `Stored "${key}" in namespace "${namespace}"` +
-              (ttl_seconds ? ` (expires in ${ttl_seconds}s)` : "") 
+            text: `Stored "${validatedKey}" in namespace "${validatedNamespace}"${ttlMessage}` 
           }],
         };
-      } catch (err) {
-        return {
-          content: [{ type: "text", text: `Error: ${(err as Error).message}` }],
-          isError: true,
-        };
+      } catch (error) {
+        throw AgentErrorFactory.databaseError('kv_set', error as Error);
       }
-    }
+    })
   );
 
   server.tool(
@@ -48,36 +58,45 @@ export function registerKvTools(server: McpServer) {
       namespace: z.string().optional().default("default")
         .describe("Namespace for key isolation"),
     },
-    async ({ key, namespace }) => {
+    withErrorHandling(async ({ key, namespace }) => {
+      // Validate inputs
+      const validatedKey = ValidationUtils.validateKey(key);
+      const validatedNamespace = ValidationUtils.validateNamespace(namespace);
+
       try {
         const result = db.prepare(`
           SELECT value, ttl FROM kv WHERE namespace = ? AND key = ?
-        `).get(namespace, key) as { value: string; ttl?: number } | undefined;
+        `).get(validatedNamespace, validatedKey) as { value: string; ttl?: number } | undefined;
 
         if (!result) {
-          return {
-            content: [{ type: "text", text: `Key "${key}" not found in namespace "${namespace}"` }],
-          };
+          throw AgentErrorFactory.create(
+            ErrorCode.KEY_NOT_FOUND,
+            `Key "${validatedKey}" not found in namespace "${validatedNamespace}"`
+          );
         }
 
         // Check TTL
         if (result.ttl && result.ttl < Math.floor(Date.now() / 1000)) {
-          db.prepare("DELETE FROM kv WHERE namespace = ? AND key = ?").run(namespace, key);
-          return {
-            content: [{ type: "text", text: `Key "${key}" not found in namespace "${namespace}"` }],
-          };
+          // Clean up expired key
+          db.prepare("DELETE FROM kv WHERE namespace = ? AND key = ?")
+            .run(validatedNamespace, validatedKey);
+          
+          throw AgentErrorFactory.create(
+            ErrorCode.TTL_EXPIRED,
+            `Key "${validatedKey}" expired and was removed`
+          );
         }
 
         return {
           content: [{ type: "text", text: result.value }],
         };
-      } catch (err) {
-        return {
-          content: [{ type: "text", text: `Error: ${(err as Error).message}` }],
-          isError: true,
-        };
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error; // Re-throw AgentError
+        }
+        throw AgentErrorFactory.databaseError('kv_get', error as Error);
       }
-    }
+    })
   );
 
   server.tool(
@@ -88,28 +107,33 @@ export function registerKvTools(server: McpServer) {
       namespace: z.string().optional().default("default")
         .describe("Namespace for key isolation"),
     },
-    async ({ key, namespace }) => {
+    withErrorHandling(async ({ key, namespace }) => {
+      // Validate inputs
+      const validatedKey = ValidationUtils.validateKey(key);
+      const validatedNamespace = ValidationUtils.validateNamespace(namespace);
+
       try {
         const result = db.prepare(`
           DELETE FROM kv WHERE namespace = ? AND key = ?
-        `).run(namespace, key);
+        `).run(validatedNamespace, validatedKey);
 
         if (result.changes === 0) {
-          return {
-            content: [{ type: "text", text: `Key "${key}" not found in namespace "${namespace}"` }],
-          };
+          throw AgentErrorFactory.create(
+            ErrorCode.KEY_NOT_FOUND,
+            `Key "${validatedKey}" not found in namespace "${validatedNamespace}"`
+          );
         }
 
         return {
-          content: [{ type: "text", text: `Deleted "${key}" from namespace "${namespace}"` }],
+          content: [{ type: "text", text: `Deleted "${validatedKey}" from namespace "${validatedNamespace}"` }],
         };
-      } catch (err) {
-        return {
-          content: [{ type: "text", text: `Error: ${(err as Error).message}` }],
-          isError: true,
-        };
+      } catch (error) {
+        if (error && typeof error === 'object' && 'code' in error) {
+          throw error; // Re-throw AgentError
+        }
+        throw AgentErrorFactory.databaseError('kv_delete', error as Error);
       }
-    }
+    })
   );
 
   server.tool(
@@ -119,23 +143,35 @@ export function registerKvTools(server: McpServer) {
       namespace: z.string().optional().default("default")
         .describe("Namespace for key isolation"),
       prefix: z.string().optional()
-        .describe("Filter keys by prefix (optional)"),
+        .describe("Filter keys by prefix (alphanumeric, max 50 chars)"),
+      limit: z.number().optional().default(100)
+        .describe("Maximum keys to return (1-1000)"),
     },
-    async ({ namespace, prefix }) => {
+    withErrorHandling(async ({ namespace, prefix, limit }) => {
+      // Validate inputs
+      const validatedNamespace = ValidationUtils.validateNamespace(namespace);
+      const validatedLimit = ValidationUtils.validateNumber(limit, 1, 1000);
+      
+      let validatedPrefix: string | undefined;
+      if (prefix !== undefined) {
+        validatedPrefix = ValidationUtils.validateString(prefix, 0, 50);
+      }
+
       try {
         let query = `
           SELECT key, created_at, ttl FROM kv 
           WHERE namespace = ? 
           AND (ttl IS NULL OR ttl > ?)
         `;
-        const params: any[] = [namespace, Math.floor(Date.now() / 1000)];
+        const params: any[] = [validatedNamespace, Math.floor(Date.now() / 1000)];
 
-        if (prefix) {
+        if (validatedPrefix) {
           query += " AND key LIKE ?";
-          params.push(prefix + "%");
+          params.push(validatedPrefix + "%");
         }
 
-        query += " ORDER BY key";
+        query += " ORDER BY key LIMIT ?";
+        params.push(validatedLimit);
 
         const results = db.prepare(query).all(...params) as Array<{
           key: string;
@@ -145,7 +181,7 @@ export function registerKvTools(server: McpServer) {
 
         if (results.length === 0) {
           return {
-            content: [{ type: "text", text: `No keys found in namespace "${namespace}"` }],
+            content: [{ type: "text", text: `No keys found in namespace "${validatedNamespace}"` }],
           };
         }
 
@@ -159,15 +195,12 @@ export function registerKvTools(server: McpServer) {
         return {
           content: [{ 
             type: "text", 
-            text: `Keys in namespace "${namespace}":\n${keyList}` 
+            text: `Keys in namespace "${validatedNamespace}":\n${keyList}` 
           }],
         };
-      } catch (err) {
-        return {
-          content: [{ type: "text", text: `Error: ${(err as Error).message}` }],
-          isError: true,
-        };
+      } catch (error) {
+        throw AgentErrorFactory.databaseError('kv_list', error as Error);
       }
-    }
+    })
   );
 }

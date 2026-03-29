@@ -4,6 +4,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { registerKvTools } from "./tools/kv-store.js";
 import { registerFormatTools } from "./tools/format-convert.js";
 import { registerLogTools } from "./tools/agent-log.js";
+import { registerTaskLedgerTools } from "./tools/task-ledger.js";
+import { registerBudgetGuardTools } from "./tools/budget-guard.js";
+import { registerTemplateEngineTools } from "./tools/template-engine.js";
 
 const server = new McpServer(
   { name: "agentos-mcp", version: "1.0.0" },
@@ -14,17 +17,26 @@ AVAILABLE CAPABILITIES:
 - kv_set/kv_get/kv_delete/kv_list: Persistent key-value memory across sessions
 - format_convert: Convert between file formats (MD, HTML, CSV, JSON, YAML, XML)
 - log_action/log_search/log_export: Structured activity logging and audit trail
+- task_create/task_checkpoint/task_rollback/task_status/task_list/task_complete: Task state management
+- budget_set/budget_check/budget_consume: Resource tracking and loop detection
+- template_list/template_render/template_create: Jinja2-style templating with built-in library
 
 RECOMMENDED WORKFLOWS:
 - "Remember something": kv_set with a descriptive key
 - "What did I do earlier?": log_search with relevant keywords
-- "Convert this data": format_convert with source format and target format`
+- "Convert this data": format_convert with source format and target format
+- "Track this task": task_create with session_id
+- "Check my budget": budget_check with budget_id
+- "Generate a meeting notes": template_render with meeting_notes template`
   }
 );
 
 registerKvTools(server);
 registerFormatTools(server);
 registerLogTools(server);
+registerTaskLedgerTools(server);
+registerBudgetGuardTools(server);
+registerTemplateEngineTools(server);
 
 async function main() {
   const transport = new StdioServerTransport();
